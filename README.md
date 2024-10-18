@@ -51,3 +51,7 @@ Because it contains 10,000 data points, it would be very difficult for a human t
 Hence, why we're using a ML model to make this prediction. We feed the model the data and it learns the patterns and relationships in the data to make predictions of whether or not the customers will churn. We're giving the computer a large set of data and asking it to learn the patterns in the data so it can make accurate predictions based on new and unseen data.
 
 This is the premise of Machine Learning.
+
+To activate virtual environment:
+
+- source .venv/Scripts/activate
