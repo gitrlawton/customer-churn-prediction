@@ -1,4 +1,5 @@
 .venv
+.env
 
 # Pickle files
 *.pkl
