@@ -84,80 +84,61 @@ def make_predictions(input_df, input_dict):
     with col1:
         fig = ut.create_gauge_chart(avg_probability)
         st.plotly_chart(fig, use_container_width=True)
-        st.write(f"The customer has a {avg_probability:.2%} probability of churning.")
+        st.write(f"The customer has a {avg_probability:.2%} chance of churning.")
 
     with col2:
         fig_probs = ut.create_model_probability_chart(probabilities)
         st.plotly_chart(fig_probs, use_container_width=True)
-    
-    # # Display the probabilities on the front-end.
-    # st.markdown("### Model Probabilities: Percent Likely to Churn")
-    
-    # for model, prob in probabilities.items():
-    #     st.write(f"{model} {prob}")
-    
-    # st.write(f"Average Probability: {avg_probability}")
+
     
     return avg_probability
 
 def explain_prediction(probability, input_dict, surname):
-    prompt = f"""You are an expert data scientist at a bank, where you specialize 
-    in interpreting and explaining machine learning model predictions.
 
-    Your machine learning model has predicted that a customer named {surname} has 
-    a {round(probability * 100, 1)}% chance of churning, based on the information 
-    provided below.
+    
+    chance_of_churning = "low" if round(probability * 100, 1) < 40 else "high"
+    
+    prompt = f"""
+    My machine learning model has predicted that a customer named {surname} has 
+    a {chance_of_churning} chance of churning, based on their data as 
+    a customer, here: {input_dict}
 
-    Here is the customer's information:
-    {input_dict}
+    These are the most important features for predicting churn, listed in order:
+    - The number of products the customer has (NumOfProducts)
+    - If the customer is an active member (IsActiveMember)
+    - The customer's age (Age)
+    - Their account balance (Balance)
 
-    Here are the machine learning model's top 10 most important features for 
-    predicting churn:
 
-        Feature           | Importance
-        ------------------------------------------------
-        NumOfProducts     | 0.323888
-        IsActiveMember    | 0.164146
-        Age               | 0.109550
-        Geography_Germany | 0.091373
-        Balance           | 0.052786
-        Geography_France  | 0.046463
-        Gender_Female     | 0.045283
-        Geography_Spain   | 0.036855
-        CreditScore       | 0.035895
-        EstimatedSalary   | 0.032655
-        HasCrCard         | 0.031940
-        Tenure            | 0.030054
-        Gender_Male       | 0.000000
+    Your job:
+    Explain why {surname} has a {chance_of_churning} chance of churning, following
+    this format:
+    
+    **1. Account balance:**
+    
+    ...
 
-    {pd.set_option('display.max_columns', None)}
+    **2. Tenure with the bank:**
 
-    Here are summary statistics for churned customers:
-    {df[df['Exited'] == 1].describe()}
+    ...
 
-    Here are summary statistics for non-churned customers:
-    {df[df['Exited'] == 0].describe()}
+    **3. Active member status:**
 
-    - If the customer has over a 40% risk of churning, generate a 3 sentence 
-    explanation of why they are at risk of churning.
-    - If the customer has less than a 40% risk of churning, generate a 3 sentence 
-    explanation of why they might not be at risk of churning.
-    - Your explanation should be based on the customer's information, the summary 
-    statistics of churned and non-churned customers, and the feature importances 
-    provided.
+    ...
 
-    Don't mention the probability of churning, or the machine learning model, or 
-    say anything like "Based on the machine learning model's prediction and top 10 
-    most important features".  Simply explain the prediction.
+    **Combining yhese factors:**
+
+    These factors combined paint a picture of a customer who is ... 
+    This scenario aligns with a ____ likelihood of churn.
 
     """
 
     print("EXPLANATION PROMPT", prompt)
 
     raw_response = client.chat.completions.create(
-        model="llama-3.2-3b-preview",
+        model="llama-3.1-8b-instant",
         messages=[{
-            "role": "user",
+            "role": "user", 
             "content": prompt
         }],
     )

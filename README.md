@@ -1,6 +1,8 @@
 Working with a dataset from a bank to see how likely a customer is to churn
 (stop being a customer of the bank).
 
+Utilizes classical machine-learning and generative AI.
+
 Link to dataset:
 https://www.kaggle.com/datasets/mathchi/churn-for-bank-customers?resource=download
 
