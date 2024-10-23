@@ -7,6 +7,30 @@ from dotenv import load_dotenv
 from openai import OpenAI
 import utils as ut
 
+# Set page config
+st.set_page_config(
+    layout="wide",
+    page_title="Customer Churn Prediction",
+    # initial_sidebar_state="expanded",
+    # menu_items={
+    #     'Get Help': 'https://www.extremelycoolapp.com/help',
+    #     'Report a bug': "https://www.extremelycoolapp.com/bug",
+    #     'About': "# This is a header. This is an *extremely* cool app!"
+    # }
+)
+
+# Custom CSS
+st.markdown("""
+<style>
+    .element-container {
+        margin-bottom: 0.3rem !important;
+    }
+    .row-widget.stCheckbox {
+        margin-bottom: -1rem !important;
+    }
+</style>
+""", unsafe_allow_html=True)
+
 # Load environment variables from .env file
 load_dotenv()
 
@@ -58,7 +82,7 @@ def prepare_input(credit_score, location, gender, age, tenure, balance,
 
 # Define a function to make predictions using the ML models we trained.
 # Takes in the input dataframe and input dictionary from prepare_input().
-def make_predictions(input_df, input_dict):
+def make_predictions(input_df, input_dict, customer_percentiles):
     
     # Dictionary representing the predictions of the probabilities for the models.  
     # predict_proba() returns an array of predicted probabilities for each
@@ -84,12 +108,13 @@ def make_predictions(input_df, input_dict):
     with col1:
         fig = ut.create_gauge_chart(avg_probability)
         st.plotly_chart(fig, use_container_width=True)
-        st.write(f"The customer has a {avg_probability:.2%} chance of churning.")
 
     with col2:
         fig_probs = ut.create_model_probability_chart(probabilities)
         st.plotly_chart(fig_probs, use_container_width=True)
-
+    
+    fig_percentile = ut.create_customer_percentiles_chart(customer_percentiles)
+    st.plotly_chart(fig_percentile, use_container_width=True)
     
     return avg_probability
 
@@ -99,11 +124,11 @@ def explain_prediction(probability, input_dict, surname):
     chance_of_churning = "low" if round(probability * 100, 1) < 40 else "high"
     
     prompt = f"""
-    My machine learning model has predicted that a customer named {surname} has 
+    A customer named {surname} has 
     a {chance_of_churning} chance of churning, based on their data as 
     a customer, here: {input_dict}
-
-    These are the most important features for predicting churn, listed in order:
+    
+    
     - The number of products the customer has (NumOfProducts)
     - If the customer is an active member (IsActiveMember)
     - The customer's age (Age)
@@ -111,33 +136,32 @@ def explain_prediction(probability, input_dict, surname):
 
 
     Your job:
-    Explain why {surname} has a {chance_of_churning} chance of churning, following
+    Explain why {surname} has a {chance_of_churning} chance of churning, based on their data, following
     this format:
     
-    **1. Number of products:**
+    **Number of products**\n
     
     ...
 
-    **2. Customer's age:**
+    **Customer's age**\n
     
     ...
     
-    **3. Account balance:**
+    **Account balance**\n
     
     ...
 
-    **4. Tenure with the bank:**
+    **Tenure with the bank**\n
 
     ...
 
-    **5. Active member status:**
+    **Active member status**\n
 
     ...
 
-    **Combining these factors:**
+    **Conclusion**\n
 
-    These factors combined paint a picture of a customer who is ... 
-    This scenario aligns with a ____ likelihood of churn.
+    Reiterate that the customer aligns with a **____** likelihood of churn in a short, single sentence.
 
     """
 
@@ -193,57 +217,41 @@ def generate_email(probability, input_dict, explanation, surname):
 
 st.title("Customer Churn Prediction")
 
-# Read in the customer data.
-df = pd.read_csv("churn.csv")
+# Read in the csv file.
+churn_df = pd.read_csv("churn.csv")
 
 # Create a list of customers for the dropdown menu.
 customers = [
     # Iterates through each row of the dataframe and creates a string for each
     # customer, in the form "Customer ID - Surname".
-    f"{row['CustomerId']} - {row['Surname']}" for _, row in df.iterrows()
+    f"{row['Surname']} [{row['CustomerId']}]" for _, row in churn_df.iterrows()
 ]
 
 # Display the list of customers in a dropdown menu.
-selected_customer_option = st.selectbox("Select a customer", customers)
+selected_customer_option = st.selectbox("Customer [ID] (Select one)", customers)
 
 # When a user selects a customer, we want to store the ID and surname in separate
 # variables.
 if selected_customer_option:
-    selected_customer_id = int(selected_customer_option.split(" - ")[0])
-    #print("Selected Customer ID:", selected_customer_id)
+    selected_customer_id = int(selected_customer_option.split("[")[1].strip("]"))
     
-    selected_customer_surname = selected_customer_option.split(" - ")[1]
-    #print("Selected Customer Surname:", selected_customer_surname)
+    selected_customer_surname = selected_customer_option.split(" [")[0]
     
     # Filter the dataframe to get all the data associated with the selected 
     # customer, using the loc accessor from the dataframe.
-    selected_customer = df.loc[df["CustomerId"] == selected_customer_id].iloc[0]
+    selected_customer = churn_df.loc[churn_df["CustomerId"] == selected_customer_id].iloc[0]
     print("Selected Customer:\n", selected_customer)
     
-    # Create two columns for us to add UI elements to.
-    col1, col2 = st.columns(2)
-    
-    # Display the customers attributes in column 1.
+    # Create four columns for us to add UI elements to.
+    col1, col2, col3, col4 = st.columns(4)
+
+    # Display the customers attributes in four columns
     with col1:
         credit_score = st.number_input(
             "Credit Score",
             min_value=300,
             max_value=850,
             value=int(selected_customer["CreditScore"])
-        )
-        
-        location = st.selectbox(
-            "Location", 
-            ["Spain", "France", "Germany"],
-            index=["Spain", "France", "Germany"].index(
-                selected_customer["Geography"]
-            )
-        )
-        
-        gender = st.radio(
-            "Gender",
-            ["Male", "Female"],
-            index=0 if selected_customer["Gender"] == "Male" else 1
         )
         
         age = st.number_input(
@@ -253,15 +261,25 @@ if selected_customer_option:
             value=int(selected_customer["Age"])
         )
         
+
+    with col2:
+        location = st.selectbox(
+            "Location", 
+            ["Spain", "France", "Germany"],
+            index=["Spain", "France", "Germany"].index(
+                selected_customer["Geography"]
+            )
+        )
+        
         tenure = st.number_input(
             "Tenure (years)",
             min_value=0,
             max_value=50,
             value=int(selected_customer["Tenure"])
         )
+        
 
-    # Display the customers attributes in column 2.
-    with col2:
+    with col3:
         balance = st.number_input(
             "Balance",
             min_value=0.0,
@@ -274,22 +292,35 @@ if selected_customer_option:
             max_value=10,
             value=int(selected_customer["NumOfProducts"])
         )
-        
-        has_credit_card = st.checkbox(
-            "Has Credit Card",
-            value=bool(selected_customer["HasCrCard"])
-        )
-        
-        is_active_member = st.checkbox(
-            "Is Active Member",
-            value=bool(selected_customer["IsActiveMember"])
-        )
-        
+
+    with col4:
         estimated_salary = st.number_input(
             "Estimated Salary",
             min_value=0.0,
             value=float(selected_customer["EstimatedSalary"])
         )
+        
+        # Create two sub-columns within col4
+        subcol1, subcol2 = st.columns(2)
+        
+        with subcol1:
+            gender = st.radio(
+                "Gender",
+                ["Male", "Female"],
+                index=0 if selected_customer["Gender"] == "Male" else 1
+            )
+        
+        with subcol2:
+            st.markdown("<p style='font-size: 14px; margin-bottom: 0px;'>Customer Status</p>", unsafe_allow_html=True) 
+            has_credit_card = st.checkbox(
+                "Credit Card",
+                value=bool(selected_customer["HasCrCard"])
+            )
+            
+            is_active_member = st.checkbox(
+                "Active Member",
+                value=bool(selected_customer["IsActiveMember"])
+            )
     
     input_df, input_dict = prepare_input(
         credit_score, 
@@ -304,7 +335,9 @@ if selected_customer_option:
         estimated_salary
     )
     
-    avg_probability = make_predictions(input_df, input_dict)
+    customer_percentiles = ut.calculate_percentiles(selected_customer_id, churn_df)
+    
+    avg_probability = make_predictions(input_df, input_dict, customer_percentiles)
     
     explanation = explain_prediction(
             avg_probability, input_dict, selected_customer['Surname']
