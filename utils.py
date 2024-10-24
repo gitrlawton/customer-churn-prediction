@@ -201,7 +201,7 @@ def create_customer_percentiles_chart(customer_percentiles):
             tickfont=dict(color='#F5F5F5'),
             showgrid=False
         ),
-        margin=dict(l=0, r=0, t=40, b=0),
+        margin=dict(l=0, r=10, t=40, b=0),
         height=400,
         showlegend=False,
         plot_bgcolor='rgba(0,0,0,0)',  # Transparent background

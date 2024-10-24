@@ -178,11 +178,14 @@ def explain_prediction(probability, input_dict, surname):
     return raw_response.choices[0].message.content
 
 def generate_email(probability, input_dict, explanation, surname):
+    print("Probability of churn in generate_email:", round(probability * 
+            100, 1))
+    
     prompt = f"""You are a manager at a bank. You are responsible for 
             ensuring customers stay with the bank.
 
             You noticed a customer named {surname} has a {round(probability * 
-            100, 1)}% chance of churning.
+            100, 1)}% risk of churning.
 
             Here is the customer's information:
             {input_dict}
@@ -191,15 +194,16 @@ def generate_email(probability, input_dict, explanation, surname):
             of churning:
             {explanation}
 
-            If they are at risk of churning, generate an email to the customer 
+            If their risk of churning is greater than 40%, generate an email to the customer 
             based on their information, asking them to stay and offering them
             incentives so that they become more loyal to the bank. You want to make 
             the email as enticing as possible to the customer.
             
             Make sure to list out a set of incentives to stay based on their 
-            information, in bullet point format. Don't ever mention the 
-            probability of churning, or the machine learning model to the 
-            customer.
+            information, in bullet point format. 
+            
+            If their risk of churning is less than 40%, simply Mention their probability of churning 
+            and whether it is greater than 40%.  Do not write an email.
             """
 
     raw_response = client.chat.completions.create(
