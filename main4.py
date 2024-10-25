@@ -113,57 +113,93 @@ def make_predictions(input_df, input_dict, customer_percentiles):
     return avg_probability
 
 def explain_prediction(probability, input_dict, surname):
-
+    print("Probability of churning:", probability, "Customer Data:", input_dict)
     
-    chance_of_churning = "low" if round(probability * 100, 1) < 40 else "high"
-    
-    prompt = f"""
-    A customer named {surname} has 
-    a {chance_of_churning} chance of churning, based on their data as 
-    a customer, here: {input_dict}
-    
-    
-    - The number of products the customer has (NumOfProducts)
-    - If the customer is an active member (IsActiveMember)
-    - The customer's age (Age)
-    - Their account balance (Balance)
+    prompt = f"""You are an expert data scientist at a bank, where you specialize 
+        in interpreting and explaining machine learning model predictions.
+        
+        Your machine learning model has predicted that a customer named {surname} 
+        has a {round(probability * 100, 1)}% chance of churning, based on the 
+        information provided below.
+        
+        Here is the customer's information:
+        {input_dict}
+        
+        Here are the machine learning model's most important features for 
+        predicting churn (in order of importance):
+        
+            Feature           | Importance
+            ------------------------------------------------
+            NumOfProducts     | 0.323888
+            IsActiveMember    | 0.164146
+            Age               | 0.109550
+            Geography_Germany | 0.091373
+            Balance           | 0.052786
+            Geography_France  | 0.046463
+            Gender_Female     | 0.045283
+            Geography_Spain   | 0.036855
+            CreditScore       | 0.035895
+            EstimatedSalary   | 0.032655
+            HasCrCard         | 0.031940
+            Tenure            | 0.030054
 
-
-    Your job:
-    Explain why {surname} has a {chance_of_churning} chance of churning, based on 
-    their data, following this format:
-    
-    **Number of products**\n
-    
-    ...
-
-    **Customer's age**\n
-    
-    ...
-    
-    **Account balance**\n
-    
-    ...
-
-    **Tenure with the bank**\n
-
-    ...
-
-    **Active member status**\n
-
-    ...
-
-    **Conclusion**\n
-
-    Reiterate that the customer aligns with a **____** likelihood of churn in a 
-    short, single sentence.
-
-    """
+            
+        {pd.set_option('display.max_columns', None)}
+        
+        Here are summary statistics for churned customers:
+        {churn_df[churn_df['Exited'] == 1].describe()}
+        
+        Here are summary statistics for non-churned customers:
+        {churn_df[churn_df['Exited'] == 0].describe()}
+        
+        - If the customer has over a 40% risk of churning, generate a 3 sentence 
+        explanation of why they are at risk of churning.
+        - If the customer has less than a 40% risk of churning, generate a 3 sentence 
+        explanation of why they might not be at risk of churning.
+        - Your explanation should be based on the customer's information, the summary 
+        statistics of churned and non-churned customers, the feature importances 
+        provided, and should follow this format:
+        
+        **Number of products**\n
+        
+        Analyze the number of products (1-4) this customer has with the bank and 
+        how this typically relates to churn risk.\n
+        
+        **Customer's age**\n
+        
+        Consider how the customer's age bracket compares to typical churn patterns 
+        across different age groups.\n
+        
+        **Account balance**\n
+        
+        Evaluate the account balance level and its relationship to typical churn 
+        behavior.\n
+        
+        **Tenure with the bank**\n
+        
+        Analyze how long the customer has been with the bank and how this correlates 
+        with churn likelihood.\n
+        
+        **Active member status**\n
+        
+        Assess the customer's engagement level and what this typically indicates 
+        about churn risk.\n
+        
+        **Conclusion**\n
+        
+        Reiterate that the customer aligns with a [high/medium/low] likelihood of 
+        churn in a short, single sentence.\n
+        
+        IMPORTANT: Don't mention the probability of churning, or the machine 
+        learning model, or say anything like "Based on the machine learning model's 
+        prediction and top 10 most important features".  Simply explain the 
+        prediction.
+        """
 
     #print("EXPLANATION PROMPT", prompt)
 
     raw_response = client.chat.completions.create(
-        model="llama3-8b-8192",
+        model="llama-3.1-8b-instant",
         messages=[{
             "role": "user", 
             "content": prompt
@@ -172,37 +208,21 @@ def explain_prediction(probability, input_dict, surname):
 
     return raw_response.choices[0].message.content
 
-def generate_email(probability, input_dict, explanation, surname):
-    print("Probability of churn in generate_email:", round(probability * 
-            100, 1))
+def generate_email(input_dict, surname):
+    print("Input_dict:", input_dict)
     
     prompt = f"""You are a manager at a bank. You are responsible for 
             ensuring customers stay with the bank.
-
-            You noticed a customer named {surname} has a {round(probability * 
-            100, 1)}% risk of churning.
-
-            Here is the customer's information:
-            {input_dict}
-
-            Here is an explanation as to why the customer might be at risk 
-            of churning:
-            {explanation}
-
-            If their risk of churning is greater than 40%, generate an email to the customer 
-            based on their information, asking them to stay and offering them
-            incentives so that they become more loyal to the bank. You want to make 
-            the email as enticing as possible to the customer.
             
-            Make sure to list out a set of incentives to stay based on their 
-            information, in bullet point format. 
+            Write an email to a customer named {surname}, who you are afraid
+            may leave the bank. Let them know they are a valued member, 
+            and offer them a list of incentives in bullet point format. 
+            You want to make the email as enticing as possible to the customer.
             
-            If their risk of churning is less than 40%, simply Mention their probability of churning 
-            and whether it is greater than 40%.  Do not write an email.
             """
 
     raw_response = client.chat.completions.create(
-        model="llama3-8b-8192",
+        model="llama-3.1-8b-instant",
         messages=[{
             "role": "user", 
             "content": prompt
@@ -348,12 +368,29 @@ if selected_customer_option:
 
     st.markdown(explanation)
     
-    email = generate_email(
-            avg_probability, input_dict, explanation, selected_customer["Surname"]
-        )
-    
     st.markdown("---")
     
     st.subheader("Personalized Email")
-
-    st.markdown(email)
+    
+    
+    if avg_probability > .35:
+        email = generate_email(input_dict, selected_customer["Surname"]
+        )
+        
+        st.markdown(email)
+    else:
+        text = f"""{selected_customer['Surname']} has a relatively low likelihood 
+        of churning.  If you'd like to generate an email to send to them anyway, 
+        click "Generate Email"."""
+        
+        text_placeholder = st.empty()
+        text_placeholder.markdown(text)
+        
+        button_placeholder = st.empty()
+        
+        if button_placeholder.button("Generate Email"):
+            email = generate_email(input_dict, selected_customer["Surname"])
+            text_placeholder.empty()    # Hide the original text
+            button_placeholder.empty()  # Hide button
+            
+            st.markdown(email)
