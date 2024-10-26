@@ -113,93 +113,65 @@ def make_predictions(input_df, input_dict, customer_percentiles):
     return avg_probability
 
 def explain_prediction(probability, input_dict, surname):
-    print("Probability of churning:", probability, "Customer Data:", input_dict)
+
+    # Extracting values from dictionary of customer data.
+    credit_score = input_dict['CreditScore']
+    age = input_dict['Age']
+    tenure = input_dict['Tenure']
+    balance = f"{input_dict['Balance']:,.2f}"
+    number_of_products = f"{input_dict['NumOfProducts']} product" if input_dict['NumOfProducts'] == 1 else f"{input_dict['NumOfProducts']} products"
+    estimated_salary = f"{input_dict['EstimatedSalary']:,.2f}"
+
+    # Converting binary values for HasCrCard and IsActiveMember
+    credit_card = "have a credit card" if input_dict['HasCrCard'] == 1 else "do not have a credit card"
+    active_member = "active member" if input_dict['IsActiveMember'] == 1 else "inactive member"
+
+    # Mapping Gender based on dictionary values
+    if input_dict['Gender_Male'] == 1:
+        gender = "Male"
+    else:
+        gender = "Female"
+
+    # Mapping Geography based on dictionary values
+    if input_dict['Geography_France'] == 1:
+        location = "France"
+    elif input_dict['Geography_Germany'] == 1:
+        location = "Germany"
+    else:
+        location = "Spain"
+    
+    if round(probability * 100, 1) > 35:
+        churn_likelihood = "high"
+    else:
+        churn_likelihood = "low"
+    
     
     prompt = f"""You are an expert data scientist at a bank, where you specialize 
-        in interpreting and explaining machine learning model predictions.
+        in interpreting and explaining predictions about customers data.
         
-        Your machine learning model has predicted that a customer named {surname} 
-        has a {round(probability * 100, 1)}% chance of churning, based on the 
-        information provided below.
+        It is predicted that a customer named {surname} 
+        has a relatively {churn_likelihood} chance of churning.  They are a {age} 
+        {gender} from {location}, who has been with the bank for {tenure} years.  
+        They have a credit score of {credit_score}, ${balance} in their account, 
+        and an estimated salary of ${estimated_salary}.  They also {credit_card},  
+        have {number_of_products} with the bank, and are an {active_member} 
+        of the bank.  
         
-        Here is the customer's information:
-        {input_dict}
+        Explain which characteristics of the customer support the prediction.  
+        Do not try to prove otherwise.
         
-        Here are the machine learning model's most important features for 
-        predicting churn (in order of importance):
+        IMPORTANT - Do not mention a model, and do not use any special text formatting 
+        like italics.
         
-            Feature           | Importance
-            ------------------------------------------------
-            NumOfProducts     | 0.323888
-            IsActiveMember    | 0.164146
-            Age               | 0.109550
-            Geography_Germany | 0.091373
-            Balance           | 0.052786
-            Geography_France  | 0.046463
-            Gender_Female     | 0.045283
-            Geography_Spain   | 0.036855
-            CreditScore       | 0.035895
-            EstimatedSalary   | 0.032655
-            HasCrCard         | 0.031940
-            Tenure            | 0.030054
-
-            
-        {pd.set_option('display.max_columns', None)}
+        At the end, reiterate that the customer aligns with a **[high/low]** 
+        likelihood of churn in a short, single sentence.\n
         
-        Here are summary statistics for churned customers:
-        {churn_df[churn_df['Exited'] == 1].describe()}
-        
-        Here are summary statistics for non-churned customers:
-        {churn_df[churn_df['Exited'] == 0].describe()}
-        
-        - If the customer has over a 40% risk of churning, generate a 3 sentence 
-        explanation of why they are at risk of churning.
-        - If the customer has less than a 40% risk of churning, generate a 3 sentence 
-        explanation of why they might not be at risk of churning.
-        - Your explanation should be based on the customer's information, the summary 
-        statistics of churned and non-churned customers, the feature importances 
-        provided, and should follow this format:
-        
-        **Number of products**\n
-        
-        Analyze the number of products (1-4) this customer has with the bank and 
-        how this typically relates to churn risk.\n
-        
-        **Customer's age**\n
-        
-        Consider how the customer's age bracket compares to typical churn patterns 
-        across different age groups.\n
-        
-        **Account balance**\n
-        
-        Evaluate the account balance level and its relationship to typical churn 
-        behavior.\n
-        
-        **Tenure with the bank**\n
-        
-        Analyze how long the customer has been with the bank and how this correlates 
-        with churn likelihood.\n
-        
-        **Active member status**\n
-        
-        Assess the customer's engagement level and what this typically indicates 
-        about churn risk.\n
-        
-        **Conclusion**\n
-        
-        Reiterate that the customer aligns with a [high/medium/low] likelihood of 
-        churn in a short, single sentence.\n
-        
-        IMPORTANT: Don't mention the probability of churning, or the machine 
-        learning model, or say anything like "Based on the machine learning model's 
-        prediction and top 10 most important features".  Simply explain the 
-        prediction.
         """
 
     #print("EXPLANATION PROMPT", prompt)
 
     raw_response = client.chat.completions.create(
-        model="llama-3.1-8b-instant",
+        model="llama3-70b-8192",
         messages=[{
             "role": "user", 
             "content": prompt
@@ -216,13 +188,13 @@ def generate_email(input_dict, surname):
             
             Write an email to a customer named {surname}, who you are afraid
             may leave the bank. Let them know they are a valued member, 
-            and offer them a list of incentives in bullet point format. 
+            and extend to them a number of incentives. 
             You want to make the email as enticing as possible to the customer.
             
             """
 
     raw_response = client.chat.completions.create(
-        model="llama-3.1-8b-instant",
+        model="llama3-70b-8192",
         messages=[{
             "role": "user", 
             "content": prompt
@@ -358,39 +330,71 @@ if selected_customer_option:
     
     avg_probability = make_predictions(input_df, input_dict, customer_percentiles)
     
-    explanation = explain_prediction(
-            avg_probability, input_dict, selected_customer['Surname']
-        )
+
+    # Initialize session states
+    if 'explanation_generated' not in st.session_state:
+        st.session_state.explanation_generated = False
+    if 'explanation_text' not in st.session_state:
+        st.session_state.explanation_text = ""
+    if 'previous_customer' not in st.session_state:
+        st.session_state.previous_customer = selected_customer['CustomerId']
+    if 'email_generated' not in st.session_state:
+        st.session_state.email_generated = False
+    if 'email_text' not in st.session_state:
+        st.session_state.email_text = ""
+
+    # Reset states when customer changes
+    if st.session_state.previous_customer != selected_customer['CustomerId']:
+        st.session_state.explanation_generated = False
+        st.session_state.explanation_text = ""
+        st.session_state.email_generated = False
+        st.session_state.email_text = ""
+        st.session_state.previous_customer = selected_customer['CustomerId']
 
     st.markdown("---")
-
     st.subheader("Explanation of Prediction")
 
-    st.markdown(explanation)
-    
+    explanation_placeholder = st.empty()
+    generate_explanation_button_placeholder = st.empty()
+
+    if not st.session_state.explanation_generated:
+        if generate_explanation_button_placeholder.button("Generate Explanation"):
+            explanation = explain_prediction(
+                avg_probability, input_dict, selected_customer['Surname']
+            )
+            st.session_state.explanation_text = explanation
+            st.session_state.explanation_generated = True
+            generate_explanation_button_placeholder.empty()  # Hide button
+            st.markdown(explanation)
+    else:
+        st.markdown(st.session_state.explanation_text)
+
     st.markdown("---")
-    
+
     st.subheader("Personalized Email")
-    
-    
+
     if avg_probability > .35:
-        email = generate_email(input_dict, selected_customer["Surname"]
-        )
-        
+        email = generate_email(input_dict, selected_customer["Surname"])
+        st.session_state.email_text = email
+        st.session_state.email_generated = True
         st.markdown(email)
     else:
-        text = f"""{selected_customer['Surname']} has a relatively low likelihood 
-        of churning.  If you'd like to generate an email to send to them anyway, 
-        click "Generate Email"."""
-        
-        text_placeholder = st.empty()
-        text_placeholder.markdown(text)
-        
-        button_placeholder = st.empty()
-        
-        if button_placeholder.button("Generate Email"):
-            email = generate_email(input_dict, selected_customer["Surname"])
-            text_placeholder.empty()    # Hide the original text
-            button_placeholder.empty()  # Hide button
+        if not st.session_state.email_generated:
+            text = f"""{selected_customer['Surname']} has a relatively low likelihood 
+            of churning.  If you'd like to generate an email to send to them anyway, 
+            click "Generate Email"."""
             
-            st.markdown(email)
+            text_placeholder = st.empty()
+            text_placeholder.markdown(text)
+            
+            generate_email_button_placeholder = st.empty()
+            
+            if generate_email_button_placeholder.button("Generate Email"):
+                email = generate_email(input_dict, selected_customer["Surname"])
+                st.session_state.email_text = email
+                st.session_state.email_generated = True
+                text_placeholder.empty()    # Hide the original text
+                generate_email_button_placeholder.empty()  # Hide button
+                st.markdown(email)
+        else:
+            st.markdown(st.session_state.email_text)
