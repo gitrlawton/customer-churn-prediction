@@ -1,59 +1,107 @@
-Working with a dataset from a bank to see how likely a customer is to churn
-(stop being a customer of the bank).
+# Customer Churn Prediction
 
-Utilizes classical machine-learning and generative AI.
+## Overview
 
-Link to dataset:
-https://www.kaggle.com/datasets/mathchi/churn-for-bank-customers?resource=download
+This data science project predicts customer churn for a bank using various machine learning models.
 
-This project has two parts:
+It consists of two parts:
 
-Part 1:
-Downloading the dataset from kaggle
-Understanding it with visualizations
-Preprocessing it
-Training ML models to make predicitions of how likely a customer is to churn
-Evaluating the accuracy of those models.
+1. A Jupyter Notebook where the models were trained and analyzed.
 
-Part 2:
-Creating a web app the use the ML models to make predictions for new and unseen
-customers to see how likely they are the churn.
-Taking the models predictions to generate a personalized email to send to the
-customer so that they are more likely to stay with the bank using Llama 3.1 and Groq.
+2. A web application which displays the model predictions and the customer data in a graphical user interface. The application allows the user to input new data and see how that influences their likelihood of churn. The application also provides a detailed explanation of the prediction and visualizations to help the user understand it.
 
-Data Set Acknowledgements from Kaggle:
+## Features
 
-it is much more expensive to sign in a new client than keeping an existing one.
-It is advantageous for banks to know what leads a client towards the decision to leave the company.
+- **Customer Data Input**: Users can update customer attributes such as credit score, age, tenure, balance, and more.
+- **Churn Prediction**: The application predicts the likelihood of a customer churning based on the input data using multiple machine learning models.
+- **Detailed Explanation**: Users receive explanation of the prediction, helping them understand the factors influencing the churn likelihood.
+- **Email Generation**: Users can generate personalized email to send to customers identified as likely to churn, offering incentives to remain with the bank.
+- **Visualizations**: The application provides visual representations of the churn probabilities and customer percentiles for better insights.
 
-Churn prevention allows companies to develop loyalty programs and retention campaigns to keep as many customers as possible.
+## Installation
 
-Data Set Properties:
+To set up the project, ensure you have Python installed on your machine. Then, follow these steps:
 
-Contains 10,000 customers, each with 13 different properties.
+1. Clone the repository:
 
-CustomerId—contains random values and has no effect on customer leaving the bank.
-Surname—the surname of a customer has no impact on their decision to leave the bank.
-CreditScore—can have an effect on customer churn, since a customer with a higher credit score is less likely to leave the bank.
-Geography—a customer’s location can affect their decision to leave the bank.
-Gender—it’s interesting to explore whether gender plays a role in a customer leaving the bank.
-Age—this is certainly relevant, since older customers are less likely to leave their bank than younger ones.
-Tenure—refers to the number of years that the customer has been a client of the bank. Normally, older clients are more loyal and less likely to leave a bank.
-Balance—also a very good indicator of customer churn, as people with a higher balance in their accounts are less likely to leave the bank compared to those with lower balances.
-NumOfProducts—refers to the number of products that a customer has purchased through the bank.
-HasCrCard—denotes whether or not a customer has a credit card. This column is also relevant, since people with a credit card are less likely to leave the bank.
-IsActiveMember—active customers are less likely to leave the bank.
-EstimatedSalary—as with balance, people with lower salaries are more likely to leave the bank compared to those with higher salaries.
-Exited—whether or not the customer left the bank.
+   ```bash
+   git clone <repository-url>
+   cd <repository-directory>
+   ```
 
-Motivation for Use of Machine-Learning:
+2. Create a virtual environment:
 
-Because it contains 10,000 data points, it would be very difficult for a human to come up with a rule or equation that determines whether or not a customer will churn. And consider the nuances of the data and understand exactly how the different features of a customer interact with each other which is crucial for making accurate predictions in a real-world scenario such as this.
+   ```bash
+   python -m venv .venv
+   ```
 
-Hence, why we're using a ML model to make this prediction. We feed the model the data and it learns the patterns and relationships in the data to make predictions of whether or not the customers will churn. We're giving the computer a large set of data and asking it to learn the patterns in the data so it can make accurate predictions based on new and unseen data.
+3. Activate the virtual environment:
 
-This is the premise of Machine Learning.
+   - On Windows (using Command Prompt):
+     ```bash
+     .venv\Scripts\activate
+     ```
+   - On Windows (using Git Bash):
+     ```bash
+     source .venv/Scripts/activate
+     ```
+   - On macOS/Linux:
+     ```bash
+     source .venv/bin/activate
+     ```
 
-To activate virtual environment:
+4. Install the required Python packages:
 
-- source .venv/Scripts/activate
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+5. Create a `.env` file in the root directory and add your API keys:
+
+   ```plaintext
+   GROQ_API_KEY=your_groq_api_key
+   ```
+
+6. Create a folder in the root directory called `models`, if one does not exist already.
+
+## Usage
+
+1. Run all of the cells in notebook.ipynb, in order. This will instantiate, train and save the models to the project directory.
+
+2. Run the Streamlit application:
+
+   ```bash
+   streamlit run main.py
+   ```
+
+3. Open the provided local URL in your web browser.
+
+4. Select a customer from the dropdown to display their data and predict churn likelihood.
+
+5. Update individual values to see how likelihood of churn changes.
+
+6. Click "Generate Explanation" to explain the prediction.
+
+7. Click "Generate Email" to generate a retention email to send to the customer.
+
+## File Descriptions
+
+- **main.py**: The main application file containing the Streamlit code for user interaction and predictions.
+- **utils.py**: Utility functions for creating visualizations and calculating customer percentiles.
+- **churn.csv**: Sample dataset containing customer information used for training and testing the models.
+- **notebook.ipynb**: Jupyter notebook containing the model training and evaluation code.
+- **requirements.txt**: List of required Python packages for the project.
+
+## Dependencies
+
+- **Streamlit**: For building the web application interface.
+- **Pandas**: For data manipulation and analysis.
+- **NumPy**: For numerical operations.
+- **Scikit-learn**: For machine learning algorithms and model evaluation.
+- **Plotly**: For creating interactive visualizations.
+- **Jupyter**: For running the Jupyter Notebook used to train and evaluate models.
+- **OpenAI**: For providing the API used to prompt a model in Groq's suite of LLMs.
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a pull request or open an issue for any suggestions or improvements.
