@@ -2,4 +2,4 @@
 .env
 
 # Pickle files
-*.pkl
+# *.pkl

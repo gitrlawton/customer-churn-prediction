@@ -2,13 +2,16 @@
 
 ## Overview
 
-This data science project predicts customer churn for a bank using various machine learning models.
+This data science project predicts customer churn for a bank using various machine learning models. It utilizes classical machine-learning and generative AI.
 
-It consists of two parts:
+This project consists of two parts:
 
 1. A Jupyter Notebook where the models were trained and analyzed.
 
 2. A web application which displays the model predictions and the customer data in a graphical user interface. The application allows the user to input new data and see how that influences their likelihood of churn. The application also provides a detailed explanation of the prediction and visualizations to help the user understand it.
+
+The dataset used in this project was downloaded from:
+https://www.kaggle.com/datasets/mathchi/churn-for-bank-customers?resource=download
 
 ## Features
 
@@ -62,7 +65,7 @@ To set up the project, ensure you have Python installed on your machine. Then, f
    GROQ_API_KEY=your_groq_api_key
    ```
 
-6. Create a folder in the root directory called `models`, if one does not exist already.
+6. Create a folder in the root directory called `models`, if it does not already exist.
 
 ## Usage
 
